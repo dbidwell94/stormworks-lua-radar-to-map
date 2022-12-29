@@ -103,7 +103,7 @@ end
 function onTick()
     mapZoomAmount = input.getNumber(22)
     currentPos = Vector:new(input.getNumber(17), input.getNumber(18))
-    myRotation = (input.getNumber(20) % 1) * 360
+    myRotation = (input.getNumber(19) % 1) * 360
     radarInput.update()
     output.setNumber(1, radarInput.rotation)
 end
