@@ -60,7 +60,7 @@ function Radar()
     local toReturn = {}
     toReturn.channels = { [1] = {}, [2] = {}, [3] = {}, [4] = {}, [5] = {}, [6] = {}, [7] = {}, [8] = {} }
     toReturn.update = function()
-        toReturn.rotation = (input.getNumber(20) % 1) * 360
+        toReturn.rotation = ((input.getNumber(20) % 1) * 360)
         for k, v in pairs(toReturn.channels) do
             v.distance = input.getNumber(1 + (2 * (k - 1)))
             v.direction = lbMath.lbmaths_radsToDegrees *
@@ -103,7 +103,7 @@ end
 function onTick()
     mapZoomAmount = input.getNumber(22)
     currentPos = Vector:new(input.getNumber(17), input.getNumber(18))
-    myRotation = (input.getNumber(19) % 1) * 360
+    myRotation = ((input.getNumber(19) % 1) * 360) - 90
     radarInput.update()
     output.setNumber(1, radarInput.rotation)
 end
@@ -125,7 +125,9 @@ function onDraw()
     screen.drawCircle(centerPos.x, centerPos.y, mapRadius)
 
     -- Draw radar line
-    local x2 = centerPos.x + mapRadius * math.cos(radarInput.rotation * lbMath.lbmaths_degsToRads)
-    local y2 = centerPos.y + mapRadius * math.sin(radarInput.rotation * lbMath.lbmaths_degsToRads)
+    local x2 = centerPos.x + mapRadius * math.cos((radarInput.rotation + myRotation) * lbMath.lbmaths_degsToRads)
+    local y2 = centerPos.y + mapRadius * math.sin((radarInput.rotation + myRotation) * lbMath.lbmaths_degsToRads)
     screen.drawLine(centerPos.x, centerPos.y, x2, y2)
+
+    screen.drawText(0, 0, tostring(myRotation))
 end
