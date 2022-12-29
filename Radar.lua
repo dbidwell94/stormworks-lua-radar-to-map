@@ -15,6 +15,8 @@ do
     simulator = simulator
     simulator:setScreen(1, "9x5")
     simulator:setProperty("ExampleNumberProperty", 123)
+    simulator:setProperty("radarDishMaxRange", 1)
+    rotation = 0
 
     -- Runs every tick just before onTick; allows you to simulate the inputs changing
     ---@param simulator Simulator Use simulator:<function>() to set inputs etc.
@@ -28,6 +30,7 @@ do
         simulator:setInputNumber(2, screenConnection.height)
         simulator:setInputNumber(3, screenConnection.touchX)
         simulator:setInputNumber(4, screenConnection.touchY)
+        simulator:setInputNumber(20, rotation)
 
         -- NEW! button/slider options from the UI
         simulator:setInputBool(31, simulator:getIsClicked(1)) -- if button 1 is clicked, provide an ON pulse for input.getBool(31)
@@ -35,6 +38,7 @@ do
 
         simulator:setInputBool(32, simulator:getIsToggled(2)) -- make button 2 a toggle, for input.getBool(32)
         simulator:setInputNumber(32, simulator:getSlider(2) * 50) -- set input 32 to the value from slider 2 * 50
+        rotation = rotation + 0.005
     end
 end
 ---@endsection
@@ -46,49 +50,59 @@ end
 -- the "LifeBoatAPI" is included by default in /_build/libs/ - you can use require("LifeBoatAPI") to get this, and use all the LifeBoatAPI.<functions>!
 
 require("LifeBoatAPI")
+lbMath = LifeBoatAPI.LBMaths
+Vector = LifeBoatAPI.LBVec
 
----@type number
-local myRotation
 
 function Radar()
     local toReturn = {}
     toReturn.channels = { [1] = {}, [2] = {}, [3] = {}, [4] = {}, [5] = {}, [6] = {}, [7] = {}, [8] = {} }
-
     toReturn.update = function()
-        toReturn.rotation = (input.getNumber(19) % 1) * 360
+        toReturn.rotation = (input.getNumber(20) % 1) * 360
         for k, v in pairs(toReturn.channels) do
             v.distance = input.getNumber(1 + (2 * (k - 1)))
-            v.direction = LifeBoatAPI.LBMaths.lbmaths_radsToDegrees *
-                (input.getNumber(2 + (2 * (k - 1))) * LifeBoatAPI.LBMaths.lbmaths_turnsToRads)
+            v.direction = lbMath.lbmaths_radsToDegrees *
+                (input.getNumber(2 + (2 * (k - 1))) * lbMath.lbmaths_turnsToRads)
             v.detected = v.distance > 0
         end
     end
     return toReturn
 end
 
----@param x number|nil
----@param y number|nil
-function Vector(x, y)
-    local toReturn = { x = x or 0, y = y or 0 }
-    return toReturn
-end
-
+---@type number
+local myRotation
+---@type number
+local searchRange = property.getNumber('radarDishMaxRange')
+---@type number
+local mapRadius = nil;
 ---@type LBVec
-local currentPos = LifeBoatAPI.LBVec:new()
-
+local currentPos = Vector:new()
 ---@type table | nil
 local screenSize = nil
+---@type number | nil
 local mapZoomAmount = 1
 local radarInput = Radar()
 
+---@param screenSizeParam LBVec
+---@return number
+function getMapRadius(screenSizeParam)
+    mapPointX, mapPointY = map.mapToScreen(currentPos.x, currentPos.y, mapZoomAmount, screenSizeParam.x,
+        screenSizeParam.y, currentPos.x + searchRange, currentPos.y)
+
+    mapPointVec = Vector:new(mapPointX, mapPointY)
+
+    -- return currentPos:lbvec_distance(mapPointVec)
+    return screenSizeParam.y
+end
 
 --[[
     Called once every frame. Logic goes here
 --]]
 function onTick()
-    currentPos = LifeBoatAPI.LBVec:new(input.getNumber(17), input.getNumber(18))
+    currentPos = Vector:new(input.getNumber(17), input.getNumber(18))
     myRotation = (input.getNumber(20) % 1) * 360
     radarInput.update()
+    output.setNumber(1, radarInput.rotation)
 end
 
 --[[
@@ -96,10 +110,21 @@ end
 --]]
 function onDraw()
     if screenSize == nil then
-        screenSize = Vector(screen.getWidth(), screen.getHeight())
+        screenSize = LifeBoatAPI.LBVec:new(screen.getWidth(), screen.getHeight())
     end
 
+    local centerPos = Vector:new(screenSize.x / 2, screenSize.y / 2)
+    mapRadius = getMapRadius(screenSize)
+
     screen.drawMap(currentPos.x, currentPos.y, mapZoomAmount);
-    screen.setColor(0, 255, 0, 125)
-    screen.drawCircleF(screenSize.x / 2, screenSize.y / 2, 1)
+    screen.setColor(0, 255, 0)
+    screen.drawCircleF(centerPos.x, centerPos.y, 1)
+
+    -- Draw radar range circle
+    screen.drawCircle(centerPos.x, centerPos.y, mapRadius)
+
+    -- Draw radar line
+    local x2 = centerPos.x + mapRadius * math.cos(radarInput.rotation * lbMath.lbmaths_degsToRads)
+    local y2 = centerPos.y + mapRadius * math.sin(radarInput.rotation * lbMath.lbmaths_degsToRads)
+    screen.drawLine(centerPos.x, centerPos.y, x2, y2)
 end

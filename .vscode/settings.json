@@ -9,7 +9,8 @@
         "__simulator",
         "print",
         "simulator",
-        "screen"
+        "screen",
+        "map"
     ],
     "Lua.runtime.version": "Lua 5.3",
     "Lua.runtime.builtin": {
