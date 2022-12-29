@@ -128,6 +128,4 @@ function onDraw()
     local x2 = centerPos.x + mapRadius * math.cos((radarInput.rotation + myRotation) * lbMath.lbmaths_degsToRads)
     local y2 = centerPos.y + mapRadius * math.sin((radarInput.rotation + myRotation) * lbMath.lbmaths_degsToRads)
     screen.drawLine(centerPos.x, centerPos.y, x2, y2)
-
-    screen.drawText(0, 0, tostring(myRotation))
 end
