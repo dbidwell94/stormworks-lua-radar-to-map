@@ -15,7 +15,7 @@ do
     simulator = simulator
     simulator:setScreen(1, "9x5")
     simulator:setProperty("ExampleNumberProperty", 123)
-    simulator:setProperty("radarDishMaxRange", 1)
+    simulator:setProperty("radarDishMaxRange", 1000)
     rotation = 0
 
     -- Runs every tick just before onTick; allows you to simulate the inputs changing
@@ -31,6 +31,8 @@ do
         simulator:setInputNumber(3, screenConnection.touchX)
         simulator:setInputNumber(4, screenConnection.touchY)
         simulator:setInputNumber(20, rotation)
+        simulator:setInputNumber(22, 25)
+
 
         -- NEW! button/slider options from the UI
         simulator:setInputBool(31, simulator:getIsClicked(1)) -- if button 1 is clicked, provide an ON pulse for input.getBool(31)
@@ -80,25 +82,26 @@ local currentPos = Vector:new()
 ---@type table | nil
 local screenSize = nil
 ---@type number | nil
-local mapZoomAmount = 1
+local mapZoomAmount = 25
 local radarInput = Radar()
 
----@param screenSizeParam LBVec
 ---@return number
-function getMapRadius(screenSizeParam)
-    mapPointX, mapPointY = map.mapToScreen(currentPos.x, currentPos.y, mapZoomAmount, screenSizeParam.x,
-        screenSizeParam.y, currentPos.x + searchRange, currentPos.y)
+function getMapRadius(zoom)
+    local sc = screenSize or { x = 0, y = 0 }
+    local mapPointX, mapPointY = map.mapToScreen(currentPos.x, currentPos.y, zoom, sc.x,
+        sc.y, currentPos.x + searchRange, currentPos.y)
 
-    mapPointVec = Vector:new(mapPointX, mapPointY)
+    local mapPointVec = Vector:new(mapPointX, mapPointY)
+    local centerVec = Vector:new(sc.x / 2, sc.y / 2)
 
-    -- return currentPos:lbvec_distance(mapPointVec)
-    return screenSizeParam.y
+    return centerVec:lbvec_distance(mapPointVec)
 end
 
 --[[
     Called once every frame. Logic goes here
 --]]
 function onTick()
+    mapZoomAmount = input.getNumber(22)
     currentPos = Vector:new(input.getNumber(17), input.getNumber(18))
     myRotation = (input.getNumber(20) % 1) * 360
     radarInput.update()
@@ -109,12 +112,10 @@ end
     Called once every frame. Draw calls go here
 --]]
 function onDraw()
-    if screenSize == nil then
-        screenSize = LifeBoatAPI.LBVec:new(screen.getWidth(), screen.getHeight())
-    end
+    screenSize = LifeBoatAPI.LBVec:new(screen.getWidth(), screen.getHeight())
 
     local centerPos = Vector:new(screenSize.x / 2, screenSize.y / 2)
-    mapRadius = getMapRadius(screenSize)
+    mapRadius = getMapRadius(mapZoomAmount)
 
     screen.drawMap(currentPos.x, currentPos.y, mapZoomAmount);
     screen.setColor(0, 255, 0)
