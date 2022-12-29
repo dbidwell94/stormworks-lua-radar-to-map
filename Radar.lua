@@ -51,6 +51,8 @@ end
 -- try require("Folder.Filename") to include code from another file in this, so you can store code in libraries
 -- the "LifeBoatAPI" is included by default in /_build/libs/ - you can use require("LifeBoatAPI") to get this, and use all the LifeBoatAPI.<functions>!
 
+---@alias Vector LBVec
+
 require("LifeBoatAPI")
 lbMath = LifeBoatAPI.LBMaths
 Vector = LifeBoatAPI.LBVec
@@ -97,6 +99,17 @@ function getMapRadius(zoom)
     return centerVec:lbvec_distance(mapPointVec)
 end
 
+---@return Vector
+function getMapEndVectorForFoundTarget(target)
+    local dir = target.direction + myRotation
+    local distance = target.distance
+
+    local newX = distance * math.cos(dir)
+    local newY = distance * math.sin(dir)
+    local directionVector = Vector:new(newX, newY)
+    return currentPos:lbvec_add(directionVector)
+end
+
 --[[
     Called once every frame. Logic goes here
 --]]
@@ -124,8 +137,19 @@ function onDraw()
     -- Draw radar range circle
     screen.drawCircle(centerPos.x, centerPos.y, mapRadius)
 
-    -- Draw radar line
+    -- Draw radar line with respect to the current vehicle rotation
     local x2 = centerPos.x + mapRadius * math.cos((radarInput.rotation + myRotation) * lbMath.lbmaths_degsToRads)
     local y2 = centerPos.y + mapRadius * math.sin((radarInput.rotation + myRotation) * lbMath.lbmaths_degsToRads)
     screen.drawLine(centerPos.x, centerPos.y, x2, y2)
+    screen.setColor(255, 0, 0)
+
+    for _, v in pairs(radarInput.channels) do
+        if v.detected then
+            local target = getMapEndVectorForFoundTarget(v)
+            local mapX, mapY = map.mapToScreen(currentPos.x, currentPos.y, mapZoomAmount, screenSize.x, screenSize.y, target.x, target.y)
+            screen.drawCircleF(mapX, mapY, 2)
+        end
+    end
+
+    screen.setColor(255, 0, 0)
 end
